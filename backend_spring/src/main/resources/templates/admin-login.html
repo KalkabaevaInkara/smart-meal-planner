@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.w3.org/1999/xhtml" lang="">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Login</title>
+</head>
+<body>
+
+<h2>Вход в админ-панель</h2>
+
+<form action="/admin/login" method="post">
+    <label>
+        <input type="email" name="email" placeholder="Email" required>
+    </label><br><br>
+    <label>
+        <input type="password" name="password" placeholder="Пароль" required>
+    </label><br><br>
+    <button type="submit">Войти</button>
+</form>
+
+<p style="color:red;" th:if="${param.error}">
+    Неверный email или пароль
+</p>
+
+</body>
+</html>

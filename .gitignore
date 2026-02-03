@@ -1,0 +1,30 @@
+# ===== Global =====
+.DS_Store
+Thumbs.db
+*.log
+.env
+
+# ===== IntelliJ / Java =====
+.idea/
+*.iml
+out/
+target/
+build/
+.gradle/
+
+# ===== Flutter / Dart =====
+.dart_tool/
+.packages
+.pub/
+build/
+
+# Android (Flutter)
+android/.gradle/
+android/local.properties
+
+# iOS (Flutter)
+ios/Pods/
+ios/.symlinks/
+
+# VS Code
+.vscode/

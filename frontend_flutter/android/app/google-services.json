@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "635337966145",
+    "project_id": "healthyeatingflutter",
+    "storage_bucket": "healthyeatingflutter.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:635337966145:android:f6cdf4a08c33ac26fffcc0",
+        "android_client_info": {
+          "package_name": "com.example.healthy_eating_flutter"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAuMLH9EX2opR9Nk3b6raaVh_Ax8aG6bZw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
