@@ -21,10 +21,7 @@ jobs:
       - name: Build backend (Maven)
         run: mvn -B clean package -DskipTests --file backend_spring/pom.xml
 
-      - name: Build backend Docker image
-        run: docker build -t healthy-backend ./backend_spring
-
-    frontend:
+  frontend:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -39,7 +36,7 @@ jobs:
           cd frontend_flutter
           flutter pub get
 
-      - name: Flutter build (dry)
+      - name: Flutter build apk (debug)
         run: |
           cd frontend_flutter
           flutter build apk --debug
