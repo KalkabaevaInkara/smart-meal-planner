@@ -19,10 +19,10 @@ jobs:
           java-version: 21
 
       - name: Build backend (Maven)
-        run: mvn -B clean package -DskipTests --file backend/pom.xml
+        run: mvn -B clean package -DskipTests --file backend_spring/pom.xml
 
       - name: Build backend Docker image
-        run: docker build -t healthy-backend ./backend
+        run: docker build -t healthy-backend ./backend_spring
 
   frontend:
     runs-on: ubuntu-latest
@@ -36,10 +36,10 @@ jobs:
 
       - name: Flutter pub get
         run: |
-          cd frontend
+          cd frontend_flutter
           flutter pub get
 
       - name: Flutter analyze
         run: |
-          cd frontend
+          cd frontend_flutter
           flutter analyze
