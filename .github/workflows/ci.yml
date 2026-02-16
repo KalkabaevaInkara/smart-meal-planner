@@ -24,7 +24,7 @@ jobs:
       - name: Build backend Docker image
         run: docker build -t healthy-backend ./backend_spring
 
-  frontend:
+    frontend:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -39,7 +39,7 @@ jobs:
           cd frontend_flutter
           flutter pub get
 
-      - name: Flutter analyze
+      - name: Flutter build (dry)
         run: |
           cd frontend_flutter
-          flutter analyze
+          flutter build apk --debug
