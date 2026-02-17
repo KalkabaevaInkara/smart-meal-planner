@@ -6,4 +6,6 @@ import java.util.List;
 
 public interface RecipeRepository extends JpaRepository<Recipe, Long> {
     List<Recipe> findByDiet_Name(String name);
+
+    void deleteById(Integer id);
 }

@@ -1,5 +1,6 @@
 package com.healthy.backend.controller;
 
+import com.healthy.backend.exception.NotFoundException;
 import com.healthy.backend.model.Recipe;
 import com.healthy.backend.repository.RecipeRepository;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +30,11 @@ public class AdminRecipeController {
 
     @GetMapping("/delete/{id}")
     public String deleteRecipe(@PathVariable Long id) {
+
+        if (!recipeRepository.existsById(id)) {
+            throw new NotFoundException("Recipe not found");
+        }
+
         recipeRepository.deleteById(id);
         return "redirect:/admin/recipes";
     }

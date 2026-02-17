@@ -1,0 +1,11 @@
+{
+  "title": "Борщ украинский",
+  "description": "Вкусный традиционный борщ",
+  "calories": 150,
+  "proteins": 8.5,
+  "fats": 6.0,
+  "carbs": 18.0,
+  "cookingTime": 45,
+  "difficulty": "Средне",
+  "imageUrl": "https://example.com/borscht.png"
+}

@@ -1,6 +1,7 @@
 package com.healthy.backend.service;
 
 import com.healthy.backend.entity.User;
+import com.healthy.backend.exception.BadRequestException;
 import com.healthy.backend.repository.UserRepository;
 import com.healthy.backend.security.JwtUtil;
 import org.springframework.beans.factory.ObjectProvider;
@@ -10,12 +11,17 @@ import org.springframework.stereotype.Service;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Service
 public class UserService {
 
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
     private final ObjectProvider<SimpMessagingTemplate> messagingTemplateProvider;
+
+    private static final Logger log = LoggerFactory.getLogger(UserService.class);
 
     public UserService(
             UserRepository userRepository,
@@ -27,33 +33,47 @@ public class UserService {
         this.messagingTemplateProvider = messagingTemplateProvider;
     }
 
-    // ✅ регистрация
+    // ================= REGISTRATION =================
     public User registerUser(User user) {
 
+        log.info("Попытка регистрации пользователя: {}", user.getEmail());
+
         if (userRepository.findByEmail(user.getEmail()).isPresent()) {
-            throw new RuntimeException("Пользователь с таким email уже существует");
+            log.warn("Регистрация отклонена — email уже существует: {}", user.getEmail());
+            throw new BadRequestException("Пользователь с таким email уже существует");
         }
 
         if (user.getRole() == null) {
             user.setRole("USER");
+            log.debug("Роль по умолчанию назначена USER для {}", user.getEmail());
         }
 
         User saved = userRepository.save(user);
+
+        log.info("Пользователь успешно зарегистрирован id={} email={}", saved.getId(), saved.getEmail());
 
         sendWs("Новый пользователь: " + saved.getEmail());
 
         return saved;
     }
 
-    // ✅ логин с ролью
+    // ================= LOGIN =================
     public Map<String, String> login(String email, String password) {
 
+        log.info("Попытка входа: {}", email);
+
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Неверный email или пароль"));
+                .orElseThrow(() -> {
+                    log.error("Вход отклонён — пользователь не найден: {}", email);
+                    return new BadRequestException("Неверный email или пароль");
+                });
 
         if (!user.getPassword().equals(password)) {
-            throw new RuntimeException("Неверный email или пароль");
+            log.error("Вход отклонён — неверный пароль: {}", email);
+            throw new BadRequestException("Неверный email или пароль");
         }
+
+        log.info("Успешный вход пользователя: {}", email);
 
         sendWs("Пользователь вошёл: " + email);
 
@@ -63,13 +83,19 @@ public class UserService {
         result.put("token", token);
         result.put("role", user.getRole());
 
+        log.debug("JWT токен выдан пользователю {}", email);
+
         return result;
     }
 
+    // ================= WEBSOCKET =================
     private void sendWs(String msg) {
         SimpMessagingTemplate messagingTemplate = messagingTemplateProvider.getIfAvailable();
         if (messagingTemplate != null) {
             messagingTemplate.convertAndSend("/topic/updates", msg);
+            log.debug("WS уведомление отправлено: {}", msg);
+        } else {
+            log.debug("WS не подключён, сообщение пропущено: {}", msg);
         }
     }
 }
