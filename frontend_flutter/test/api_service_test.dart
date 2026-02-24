@@ -1,7 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:healthy_eating_flutter/services/api_service.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   group('ApiService - Валидация', () {
     test('_validateEmail: пустой email вызывает ошибку', () async {
       expect(
@@ -84,6 +86,7 @@ void main() {
   group('ApiService - Токены', () {
     setUp(() {
       ApiService.clearRequestLog();
+      SharedPreferences.setMockInitialValues({});
     });
 
     test('getTokenSync: возвращает null если токена нет', () {

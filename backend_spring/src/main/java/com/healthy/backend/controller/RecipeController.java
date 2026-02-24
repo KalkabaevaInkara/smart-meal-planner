@@ -3,9 +3,7 @@ package com.healthy.backend.controller;
 import com.healthy.backend.exception.NotFoundException;
 import com.healthy.backend.model.Recipe;
 import com.healthy.backend.repository.RecipeRepository;
-import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -24,8 +22,29 @@ public class RecipeController {
         this.recipeRepository = recipeRepository;
     }
 
+    // 🔍 Поиск + фильтрация
     @GetMapping
-    public List<Recipe> getAllRecipes() {
+    public List<Recipe> getRecipes(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String diet) {
+
+        if (search != null && !search.isBlank() &&
+                diet != null && !diet.isBlank()) {
+
+            return recipeRepository
+                    .findByTitleContainingIgnoreCaseAndDiet_NameIgnoreCase(search, diet);
+        }
+
+        if (search != null && !search.isBlank()) {
+            return recipeRepository
+                    .findByTitleContainingIgnoreCase(search);
+        }
+
+        if (diet != null && !diet.isBlank()) {
+            return recipeRepository
+                    .findByDiet_NameIgnoreCase(diet);
+        }
+
         return recipeRepository.findAll();
     }
 
@@ -50,16 +69,5 @@ public class RecipeController {
     public Recipe getRecipeById(@PathVariable Long id) {
         return recipeRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Recipe not found"));
-    }
-
-    @GetMapping("/by-diet")
-    public List<Recipe> getByDiet(@RequestParam String diet) {
-        List<Recipe> recipes = recipeRepository.findByDiet_Name(diet);
-
-        if (recipes.isEmpty()) {
-            throw new NotFoundException("No recipes for this diet");
-        }
-
-        return recipes;
     }
 }

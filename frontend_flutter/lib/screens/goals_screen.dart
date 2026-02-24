@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/notification_service.dart';
 
 class GoalsScreen extends StatefulWidget {
   const GoalsScreen({super.key});
@@ -35,7 +36,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
     await prefs.setString('nutrition_goal_type', goalType);
     await prefs.setDouble('nutrition_target_calories', targetCalories);
     await prefs.setInt('weekly_activity_goal', weeklyGoal);
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Цели сохранены'), backgroundColor: Colors.green));
+    NotificationService.instance.success('Цели сохранены');
   }
 
   Future<void> _editDialog() async {

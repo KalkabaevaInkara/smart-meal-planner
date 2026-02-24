@@ -38,6 +38,7 @@ dependencies:
   stomp_dart_client: ^1.0.0
   vibration: ^2.0.0 # Новое — для вибрации
   flutter_local_notifications: ^17.1.0  # ✅ Новое для локальных уведомлений
+  path_provider: ^2.0.14
 
 dev_dependencies:
   flutter_test:

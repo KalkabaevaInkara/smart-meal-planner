@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../services/notification_service.dart';
 
 class NutritionTipsScreen extends StatelessWidget {
   const NutritionTipsScreen({super.key});
@@ -53,9 +54,7 @@ class NutritionTipsScreen extends StatelessWidget {
                     TextButton(
                       onPressed: () {
                         Clipboard.setData(ClipboardData(text: tip['body']!)); // ✅ добавлен !
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Совет скопирован')),
-                        );
+                        NotificationService.instance.success('Совет скопирован',);
                       },
                       child: const Text('Копировать'),
                     ),

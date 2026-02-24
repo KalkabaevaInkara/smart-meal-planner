@@ -4,7 +4,6 @@ import com.healthy.backend.entity.User;
 import com.healthy.backend.exception.BadRequestException;
 import com.healthy.backend.security.JwtUtil;
 import com.healthy.backend.service.UserService;
-import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,6 +22,21 @@ public class UserController {
         this.jwtUtil = jwtUtil;
     }
 
+    // ================= REGISTER =================
+    @PostMapping("/register")
+    public ResponseEntity<?> register(@RequestBody User user) {
+        return ResponseEntity.ok(userService.registerUser(user));
+    }
+
+    // ================= LOGIN =================
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody User user) {
+        return ResponseEntity.ok(
+                userService.login(user.getEmail(), user.getPassword())
+        );
+    }
+
+    // ================= CHECK TOKEN =================
     @GetMapping("/check")
     public ResponseEntity<?> checkToken(@RequestHeader("Authorization") String authHeader) {
 
@@ -33,19 +47,48 @@ public class UserController {
         String token = authHeader.replace("Bearer ", "");
         String email = jwtUtil.extractEmail(token);
 
-        return ResponseEntity.ok(Map.of("email", email, "valid", true));
+        return ResponseEntity.ok(Map.of(
+                "email", email,
+                "valid", true
+        ));
     }
 
-    @PostMapping("/register")
-    public User register(@RequestBody User user) {
-        return userService.registerUser(user);
+    // ================= RESET PASSWORD (по email - твой метод) =================
+    @PutMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(
+            @RequestParam String email,
+            @RequestParam String newPassword
+    ) {
+        userService.resetPassword(email, newPassword);
+        return ResponseEntity.ok(Map.of("message", "Пароль обновлён"));
     }
 
-    @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody User user) {
+    // ================= REQUEST RESET TOKEN =================
+    @PostMapping("/request-reset")
+    public ResponseEntity<?> requestReset(@RequestBody Map<String, String> body) {
 
-        String token = userService.login(user.getEmail(), user.getPassword()).toString();
+        String email = body.get("email");
 
-        return ResponseEntity.ok(Map.of("token", token));
+        if (email == null || email.isBlank()) {
+            throw new BadRequestException("Email обязателен");
+        }
+
+        userService.requestPasswordReset(email);
+
+        return ResponseEntity.ok(Map.of(
+                "message", "Reset token создан (смотри лог сервера)"
+        ));
+    }
+
+    // ================= RESET PASSWORD BY TOKEN =================
+    @PutMapping("/reset-password-by-token")
+    public ResponseEntity<?> resetByToken(
+            @RequestParam String token,
+            @RequestParam String newPassword
+    ) {
+        userService.resetPasswordByToken(token, newPassword);
+        return ResponseEntity.ok(Map.of(
+                "message", "Пароль успешно обновлён"
+        ));
     }
 }

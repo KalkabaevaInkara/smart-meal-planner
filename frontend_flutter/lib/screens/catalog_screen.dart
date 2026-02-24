@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
 import '../models/recipe.dart';
 import '../services/api_service.dart';
 import '../services/notification_service.dart';
 import '../services/local_notifications_service.dart';
 import '../widgets/recipe_card.dart';
+import '../widgets/no_internet.dart';
+import '../widgets/empty_state.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 enum SortOption { none, caloriesAsc, caloriesDesc, timeAsc, timeDesc, proteinsDesc }
 
@@ -100,13 +104,41 @@ class _CatalogScreenState extends State<CatalogScreen> {
         const Duration(seconds: 10),
         onTimeout: () {
           print('❌ ТАЙМАУТ загрузки рецептов!');
-          return [];
+          return <Recipe>[];
         },
       );
-      
+
       print('✅ Получено ${list.length} рецептов');
       _cachedRecipes = list;
       _cacheLoaded = true;
+
+      // Сохраняем в SharedPreferences для fallback
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final jsonList = list.map((r) => {
+          'id': r.id,
+          'title': r.title,
+          'description': r.description,
+          'calories': r.calories,
+          'proteins': r.proteins,
+          'fats': r.fats,
+          'carbs': r.carbs,
+          'imageUrl': r.imageUrl,
+          'cookingTime': r.cookingTime,
+          'difficulty': r.difficulty,
+          'ingredients': r.ingredients.map((i) => {
+            'id': i.id,
+            'name': i.name,
+            'caloriesPer100g': i.caloriesPer100g,
+            'proteins': i.proteins,
+            'fats': i.fats,
+            'carbs': i.carbs,
+          }).toList(),
+        }).toList();
+        await prefs.setString('cached_recipes_json', jsonEncode(jsonList));
+      } catch (e) {
+        print('⚠️ Не удалось записать кэш рецептов: $e');
+      }
 
       final uniq = <String>{};
       for (var r in list) {
@@ -120,8 +152,22 @@ class _CatalogScreenState extends State<CatalogScreen> {
       return list;
     } catch (e) {
       print('❌ Ошибка загрузки рецептов: $e');
-      print('📚 Stack trace: $e');
-      return [];
+      // Попробуем взять из SharedPreferences
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final raw = prefs.getString('cached_recipes_json');
+        if (raw != null && raw.isNotEmpty) {
+          final List<dynamic> data = jsonDecode(raw);
+          final list = data.map((json) => Recipe.fromJson(json as Map<String, dynamic>)).toList();
+          _cachedRecipes = list;
+          _cacheLoaded = true;
+          print('📦 Использован кэш из SharedPreferences: ${list.length} рецептов');
+          return list;
+        }
+      } catch (e2) {
+        print('⚠️ Ошибка чтения кэша: $e2');
+      }
+      return <Recipe>[];
     }
   }
 
@@ -267,10 +313,14 @@ class _CatalogScreenState extends State<CatalogScreen> {
                       ],
                     ),
                   );
-                } else if (snapshot.hasError) {
-                  return Center(child: Text('Ошибка: ${snapshot.error}'));
-                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(child: Text('Рецепты не найдены'));
+                  } else if (snapshot.hasError) {
+                    final err = snapshot.error.toString();
+                    if (err.contains('SocketException') || err.contains('NetworkException') || err.contains('Timeout')) {
+                      return NoInternetWidget(onRetry: () => setState(() => futureRecipes = _loadRecipesOptimized()));
+                    }
+                    return Center(child: Text('Ошибка: ${snapshot.error}'));
+                  } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return const EmptyState(text: 'Рецепты не найдены');
                 } else {
                   final filtered = _applyFiltersAndSort(snapshot.data!);
                   if (filtered.isEmpty) return const Center(child: Text('Ничего не найдено'));

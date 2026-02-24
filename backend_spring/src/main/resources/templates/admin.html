@@ -8,11 +8,32 @@
 
 <h2>Админ-панель: Рецепты</h2>
 
+<!-- 🔍 Поиск + фильтр -->
+<form method="get" th:action="@{/admin/recipes}">
+    <input type="text"
+           name="search"
+           placeholder="Поиск по названию"
+           th:value="${search}" />
+
+    <input type="text"
+           name="diet"
+           placeholder="Фильтр по диете"
+           th:value="${diet}" />
+
+    <button type="submit">Фильтр</button>
+</form>
+
+<hr>
+
 <h3>Добавить рецепт</h3>
 
-<form th:action="@{/admin/add}" method="post" th:object="${newRecipe}">
+<form th:action="@{/admin/recipes/add}"
+      method="post"
+      th:object="${recipe}">
+
     <input type="text" th:field="*{title}" placeholder="Название" required><br><br>
     <input type="text" th:field="*{description}" placeholder="Описание" required><br><br>
+
     <button type="submit">Добавить</button>
 </form>
 
@@ -33,9 +54,7 @@
         <td th:text="${r.title}"></td>
         <td th:text="${r.description}"></td>
         <td>
-            <form th:action="@{/admin/delete/{id}(id=${r.id})}" method="post">
-                <button type="submit">X</button>
-            </form>
+            <a th:href="@{/admin/recipes/delete/{id}(id=${r.id})}">X</a>
         </td>
     </tr>
 </table>

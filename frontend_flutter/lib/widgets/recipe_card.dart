@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../services/notification_service.dart';
 import '../models/recipe.dart';
 
 class RecipeCard extends StatelessWidget {
@@ -135,10 +136,10 @@ class RecipeCard extends StatelessWidget {
                                                 title: Text(ing.name),
                                                 subtitle: Text('Кал: ${ing.caloriesPer100g} ккал/100г • Б ${ing.proteins} г • Ж ${ing.fats} г • У ${ing.carbs} г'),
                                                 trailing: IconButton(
-                                                  icon: const Icon(Icons.copy, size: 20),
+                                                    icon: const Icon(Icons.copy, size: 20),
                                                   onPressed: () {
                                                     Clipboard.setData(ClipboardData(text: ing.name));
-                                                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ингредиент скопирован')));
+                                                    NotificationService.instance.success('Ингредиент скопирован');
                                                   },
                                                 ),
                                               );

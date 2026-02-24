@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/recipe.dart';
 import '../services/api_service.dart';
 import '../services/notification_service.dart';
+import '../widgets/no_internet.dart';
+import '../widgets/empty_state.dart';
 
 class AdminRecipesPage extends StatefulWidget {
   const AdminRecipesPage({super.key});
@@ -21,7 +25,30 @@ class _AdminRecipesPageState extends State<AdminRecipesPage> {
   }
 
   void _loadRecipes() {
-    futureRecipes = ApiService.fetchRecipes();
+    futureRecipes = _loadRecipesWithFallback();
+  }
+
+  Future<List<Recipe>> _loadRecipesWithFallback() async {
+    try {
+      // Пытаемся загрузить с сервера
+      return await ApiService.fetchRecipes();
+    } catch (e) {
+      // Fallback: загружаем локальные рецепты
+      print('⚠️ Не удалось загрузить с сервера: $e. Загружаю локально...');
+      
+      final prefs = await SharedPreferences.getInstance();
+      final localRecipes = prefs.getStringList('local_recipes') ?? [];
+      
+      List<Recipe> recipes = [];
+      for (String recipeJson in localRecipes) {
+        try {
+          final data = jsonDecode(recipeJson) as Map<String, dynamic>;
+          recipes.add(Recipe.fromJson(data));
+        } catch (_) {}
+      }
+      
+      return recipes;
+    }
   }
 
   Future<void> _deleteRecipe(int id, String title) async {
@@ -45,12 +72,32 @@ class _AdminRecipesPageState extends State<AdminRecipesPage> {
 
     setState(() => _isLoading = true);
     try {
-      // TODO: Реализовать DELETE /api/recipes/{id} на backend
-      // Для теста используем mock
-      await Future.delayed(const Duration(seconds: 1));
+      try {
+        await ApiService.deleteRecipe(id);
+      } catch (serverError) {
+        // Fallback: удаляем локально
+        print('⚠️ Ошибка сервера при удалении: $serverError. Удаляю локально...');
+        
+        final prefs = await SharedPreferences.getInstance();
+        final localRecipes = prefs.getStringList('local_recipes') ?? [];
+        
+        localRecipes.removeWhere((recipeJson) {
+          try {
+            final data = jsonDecode(recipeJson) as Map<String, dynamic>;
+            return data['id'] == id;
+          } catch (_) {
+            return false;
+          }
+        });
+        
+        await prefs.setStringList('local_recipes', localRecipes);
+        
+        if (!mounted) return;
+        NotificationService.instance.warning('Рецепт удалён локально (сервер недоступен)');
+      }
       
       if (!mounted) return;
-      NotificationService.instance.success('Рецепт "$title" удалён');
+      NotificationService.instance.success('Рецепт "$title" удалён!');
       _loadRecipes();
       setState(() {});
     } catch (e) {
@@ -113,26 +160,82 @@ class _AdminRecipesPageState extends State<AdminRecipesPage> {
 
     setState(() => _isLoading = true);
     try {
-      // TODO: Реализовать POST /api/recipes на backend
-      // Для теста используем mock
-      final newRecipe = Recipe(
-        id: DateTime.now().millisecond,
-        title: titleCtrl.text,
-        description: descCtrl.text,
-        calories: int.tryParse(caloriesCtrl.text) ?? 0,
-        proteins: double.tryParse(proteinsCtrl.text) ?? 0,
-        fats: double.tryParse(fatsCtrl.text) ?? 0,
-        carbs: double.tryParse(carbsCtrl.text) ?? 0,
-        imageUrl: 'https://cdn-icons-png.flaticon.com/512/1046/1046784.png',
-        cookingTime: int.tryParse(timeCtrl.text) ?? 0,
-        difficulty: difficulty,
-        ingredients: [],
-      );
+      // Валидация данных
+      if (titleCtrl.text.trim().isEmpty) {
+        throw Exception('Название рецепта не может быть пустым');
+      }
+      if (descCtrl.text.trim().isEmpty) {
+        throw Exception('Описание рецепта не может быть пустым');
+      }
 
-      await Future.delayed(const Duration(seconds: 1));
+      final calories = int.tryParse(caloriesCtrl.text);
+      if (calories == null || calories <= 0) {
+        throw Exception('Калории должны быть положительным числом');
+      }
+
+      final proteins = double.tryParse(proteinsCtrl.text);
+      if (proteins == null || proteins < 0) {
+        throw Exception('Белки должны быть неотрицательным числом');
+      }
+
+      final fats = double.tryParse(fatsCtrl.text);
+      if (fats == null || fats < 0) {
+        throw Exception('Жиры должны быть неотрицательным числом');
+      }
+
+      final carbs = double.tryParse(carbsCtrl.text);
+      if (carbs == null || carbs < 0) {
+        throw Exception('Углеводы должны быть неотрицательным числом');
+      }
+
+      final cookingTime = int.tryParse(timeCtrl.text);
+      if (cookingTime == null || cookingTime <= 0) {
+        throw Exception('Время готовки должно быть положительным числом');
+      }
+
+      // Отправляем запрос на сервер
+      try {
+        await ApiService.createRecipe({
+          'title': titleCtrl.text.trim(),
+          'description': descCtrl.text.trim(),
+          'calories': calories,
+          'proteins': proteins,
+          'fats': fats,
+          'carbs': carbs,
+          'cookingTime': cookingTime,
+          'difficulty': difficulty,
+          'imageUrl': 'https://cdn-icons-png.flaticon.com/512/1046/1046784.png',
+          'ingredients': [], // Assuming empty for now
+        });
+      } catch (serverError) {
+        // Fallback: сохраняем локально если сервер недоступен
+        print('⚠️ Ошибка сервера: $serverError. Сохраняю локально...');
+        
+        final prefs = await SharedPreferences.getInstance();
+        final localRecipes = prefs.getStringList('local_recipes') ?? [];
+        final newRecipe = {
+          'id': DateTime.now().millisecondsSinceEpoch,
+          'title': titleCtrl.text.trim(),
+          'description': descCtrl.text.trim(),
+          'calories': calories,
+          'proteins': proteins,
+          'fats': fats,
+          'carbs': carbs,
+          'cookingTime': cookingTime,
+          'difficulty': difficulty,
+          'imageUrl': 'https://cdn-icons-png.flaticon.com/512/1046/1046784.png',
+          'ingredients': [],
+        };
+        
+        localRecipes.add(jsonEncode(newRecipe));
+        await prefs.setStringList('local_recipes', localRecipes);
+        
+        if (!mounted) return;
+        NotificationService.instance.warning('Рецепт сохранён локально (сервер недоступен)');
+      }
       
       if (!mounted) return;
-      NotificationService.instance.celebrate('Рецепт "${newRecipe.title}" добавлен!');
+      NotificationService.instance.celebrate('Рецепт "${titleCtrl.text}" добавлен!');
       _loadRecipes();
       setState(() {});
     } catch (e) {
@@ -169,9 +272,13 @@ class _AdminRecipesPageState extends State<AdminRecipesPage> {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           } else if (snapshot.hasError) {
+            final err = snapshot.error.toString();
+            if (err.contains('SocketException') || err.contains('NetworkException') || err.contains('Timeout')) {
+              return NoInternetWidget(onRetry: () => setState(() => _loadRecipes()));
+            }
             return Center(child: Text('Ошибка: ${snapshot.error}'));
           } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('Рецепты не найдены'));
+            return const EmptyState(text: 'Рецепты не найдены');
           }
 
           final recipes = snapshot.data!;

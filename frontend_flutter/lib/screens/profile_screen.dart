@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
+import '../services/logging_service.dart';
+import '../services/notification_service.dart';
 import 'meal_history_screen.dart';
 import 'goals_screen.dart';
 import 'nutrition_tips_screen.dart';
@@ -23,6 +25,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   double weight = 64.5;
   List<Map<String, dynamic>> mealHistory = [];
   bool isAdmin = false;
+  bool _isExporting = false;
+  bool _isSending = false;
 
   final List<String> healthyAvatars = [
     'https://cdn-icons-png.flaticon.com/512/415/415682.png',
@@ -138,13 +142,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (result == true && mounted) {
       await _saveProfile();
       setState(() {});
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Профиль обновлён'), backgroundColor: Colors.green));
+      NotificationService.instance.success('Профиль обновлён');
     }
   }
 
   void _openMealHistory() {
     if (email.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Сначала войдите в аккаунт (email не указан)')));
+      NotificationService.instance.warning('Сначала войдите в аккаунт (email не указан)');
       return;
     }
     Navigator.push(context, MaterialPageRoute(builder: (context) => MealHistoryScreen(email: email)));
@@ -327,6 +331,74 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       'Ваши данные сохраняются локально и не передаются третьим лицам.',
                       textAlign: TextAlign.center,
                       style: TextStyle(color: Colors.grey),
+                    ),
+                    const SizedBox(height: 12),
+                    Card(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 2,
+                      child: Column(
+                        children: [
+                          ListTile(
+                            leading: const Icon(Icons.archive_outlined, color: Colors.green),
+                            title: const Text('Экспорт сетевых логов'),
+                            subtitle: const Text('Экспортировать локально сохранённые сетевые логи'),
+                            trailing: _isExporting
+                                ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
+                                : ElevatedButton(
+                                    onPressed: () async {
+                                      setState(() => _isExporting = true);
+                                      final path = await LoggingService.instance.exportLogsToFile();
+                                      setState(() => _isExporting = false);
+                                      if (path != null) {
+                                        NotificationService.instance.success('Логи экспортированы: $path');
+                                      } else {
+                                        NotificationService.instance.error('Не удалось экспортировать логи');
+                                      }
+                                    },
+                                    child: const Text('Экспорт'),
+                                  ),
+                          ),
+                          const Divider(height: 1),
+                          ListTile(
+                            leading: const Icon(Icons.send_outlined, color: Colors.green),
+                            title: const Text('Отправить логи на сервер'),
+                            subtitle: const Text('Отправляет JSON с логами на указанный endpoint'),
+                            trailing: _isSending
+                                ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
+                                : ElevatedButton(
+                                    onPressed: () async {
+                                      final controller = TextEditingController(text: '${Uri.parse(ApiService.baseUrl).replace(path: "/api/logs")}');
+                                      final ok = await showDialog<bool>(
+                                        context: context,
+                                        builder: (ctx) => AlertDialog(
+                                          title: const Text('Введите endpoint для логов'),
+                                          content: TextField(controller: controller, decoration: const InputDecoration(hintText: 'https://example.com/api/logs')),
+                                          actions: [
+                                            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Отмена')),
+                                            ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Отправить')),
+                                          ],
+                                        ),
+                                      );
+                                      if (ok != true) return;
+                                      final url = controller.text.trim();
+                                      if (url.isEmpty) {
+                                        NotificationService.instance.warning('Endpoint не указан');
+                                        return;
+                                      }
+                                      setState(() => _isSending = true);
+                                      final success = await LoggingService.instance.sendLogsToEndpoint(url);
+                                      setState(() => _isSending = false);
+                                      if (success) {
+                                        NotificationService.instance.success('Логи успешно отправлены');
+                                      } else {
+                                        NotificationService.instance.error('Ошибка при отправке логов');
+                                      }
+                                    },
+                                    child: const Text('Отправить'),
+                                  ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),

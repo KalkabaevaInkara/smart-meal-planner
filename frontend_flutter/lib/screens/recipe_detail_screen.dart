@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/notification_service.dart';
 import '../models/recipe.dart';
 
 class RecipeDetailScreen extends StatelessWidget {
@@ -11,9 +12,7 @@ class RecipeDetailScreen extends StatelessWidget {
     final prefs = await SharedPreferences.getInstance();
     final email = prefs.getString('email');
     if (email == null || email.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Войдите в аккаунт, чтобы добавлять в план')),
-      );
+      NotificationService.instance.warning('Войдите в аккаунт, чтобы добавлять в план');
       return;
     }
 
@@ -104,9 +103,7 @@ class RecipeDetailScreen extends StatelessWidget {
     });
     await prefs.setString(histKey, jsonEncode(hist));
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Добавлено в план')),
-    );
+    NotificationService.instance.success('Добавлено в план');
   }
 
   @override

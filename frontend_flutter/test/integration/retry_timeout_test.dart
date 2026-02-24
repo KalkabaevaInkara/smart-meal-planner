@@ -27,7 +27,7 @@ void main() {
   });
 
   test('ApiService should throw TimeoutNetworkException after retries', () async {
-    final port = server!.port;
+    // final port = server!.port; // Not used
     // Установим короткий таймаут и только 2 попытки
     ApiService.setTimeoutForTests(const Duration(milliseconds: 200));
     ApiService.setMaxRetriesForTests(2);

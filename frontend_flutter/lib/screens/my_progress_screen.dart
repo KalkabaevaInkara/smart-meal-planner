@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../models/recipe.dart';
+import '../services/notification_service.dart';
 
 class MyProgressScreen extends StatefulWidget {
   const MyProgressScreen({super.key});
@@ -65,8 +65,7 @@ class _MyProgressScreenState extends State<MyProgressScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('meal_history_$_email');
     setState(() => _history = []);
-    ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('История очищена')));
+    NotificationService.instance.success('История очищена');
   }
 
   Future<void> _deleteEntry(int index) async {

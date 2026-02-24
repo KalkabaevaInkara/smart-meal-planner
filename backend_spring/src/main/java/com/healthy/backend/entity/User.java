@@ -1,6 +1,7 @@
 package com.healthy.backend.entity;
 
 import jakarta.persistence.*;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "users")
@@ -20,7 +21,14 @@ public class User {
     private String password;
 
     @Column(nullable = false)
-    private String role; // ✅ ДОБАВИЛИ РОЛЬ
+    private String role;
+
+    // ===== ДОБАВЛЕНО ДЛЯ RESET =====
+    @Column(name = "reset_token")
+    private String resetToken;
+
+    @Column(name = "reset_token_expiry")
+    private LocalDateTime resetTokenExpiry;
 
     public User() {}
 
@@ -59,12 +67,28 @@ public class User {
         this.password = password;
     }
 
-    // ✅ ВОТ ТЕПЕРЬ ПРАВИЛЬНО
     public String getRole() {
         return role;
     }
 
     public void setRole(String role) {
         this.role = role;
+    }
+
+    // ===== RESET GETTERS / SETTERS =====
+    public String getResetToken() {
+        return resetToken;
+    }
+
+    public void setResetToken(String resetToken) {
+        this.resetToken = resetToken;
+    }
+
+    public LocalDateTime getResetTokenExpiry() {
+        return resetTokenExpiry;
+    }
+
+    public void setResetTokenExpiry(LocalDateTime resetTokenExpiry) {
+        this.resetTokenExpiry = resetTokenExpiry;
     }
 }
